@@ -1,4 +1,6 @@
 from openpyxl import load_workbook
+import re
+from datetime import datetime
 
 # Carregar o arquivo Excel
 excel = load_workbook('Relacao_Produtos_e_Clientes_2024.xlsx')
@@ -21,7 +23,7 @@ def verificar_numero(valor):
         return True
     except (ValueError, TypeError):
         return False
-    
+
 # Dicionário de substituição para métodos de pagamento
 def verificar_pagamento(metPagamento):
     substituicao = {
@@ -36,8 +38,17 @@ def verificar_pagamento(metPagamento):
             return key
     return metPagamento
 
-def verificar_data(row):
+def verificar_data(data):
+    if isinstance(data, datetime):
+        data_str = data.strftime("%Y-%m-%d")  # Formato YYYY-MM-DD
+    else:
+        data_str = str(data)
 
+    regex_data = r'\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b'  # Ajuste do regex para data comum
+    if re.match(regex_data, data_str):
+        return True
+    else:
+        return False
 
 # Iterar sobre as linhas da planilha e preencher as listas
 for row in planilha.iter_rows(min_row=2, values_only=True):
@@ -51,7 +62,8 @@ for row in planilha.iter_rows(min_row=2, values_only=True):
     desconto = row[7]
 
     # Verificar e padronizar as datas e adicionar à lista de datas
-    lista_data.append(data)
+    if verificar_data(data) == True:
+        lista_data.append(data)
 
     # Adicionar produto à lista de produtos
     lista_produtos.append(produto)
