@@ -1,6 +1,7 @@
 from openpyxl import load_workbook
 import re
 from datetime import datetime
+import pandas as pd
 
 # Carregar o arquivo Excel
 excel = load_workbook('Relacao_Produtos_e_Clientes_2024.xlsx')
@@ -38,17 +39,21 @@ def verificar_pagamento(metPagamento):
             return key
     return metPagamento
 
-def verificar_data(data):
-    if isinstance(data, datetime):
-        data_str = data.strftime("%Y-%m-%d")  # Formato YYYY-MM-DD
-    else:
-        data_str = str(data)
+# # Função corrigida para verificar a data
+# def verificar_data(data):
+#     if isinstance(data, datetime):
+#         return True
 
-    regex_data = r'\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b'  # Ajuste do regex para data comum
-    if re.match(regex_data, data_str):
-        return True
-    else:
-        return False
+#     formatos = ["%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y", "%m/%d/%Y"]
+
+#     for formato in formatos:
+#         try:
+#             datetime.strptime(data, formato)
+#             return True
+#         except (ValueError, TypeError):
+#             continue
+
+#     return False
 
 # Iterar sobre as linhas da planilha e preencher as listas
 for row in planilha.iter_rows(min_row=2, values_only=True):
@@ -61,16 +66,19 @@ for row in planilha.iter_rows(min_row=2, values_only=True):
     metPagamento = row[6]
     desconto = row[7]
 
-    # Verificar e padronizar as datas e adicionar à lista de datas
-    if verificar_data(data) == True:
-        lista_data.append(data)
+    # # Verificar e padronizar as datas e adicionar à lista de datas
+    # if verificar_data(data):
+    #     lista_data.append(data)
 
     # Adicionar produto à lista de produtos
     lista_produtos.append(produto)
 
     # Adicionar valor à lista de valores somente se passar na verificação
     if verificar_numero(valor):
-        lista_valor.append(valor)
+        valor_novo = re.sub(r'[$]', '', valor)  # Remover símbolo $
+        lista_valor.append(float(valor_novo))
+    else:
+        lista_valor.append(0)
 
     # Adicionar regiao à lista de regioes
     lista_regiao.append(regiao)
@@ -88,13 +96,17 @@ for row in planilha.iter_rows(min_row=2, values_only=True):
     # Verificar o se o valor do desconto é condizente e adicionar à lista desconto
     if desconto >= 0:
         lista_desconto.append(desconto)
+    else:
+        lista_desconto.append(0)
 
-# Imprimir as listas para verificar os resultados
-print("Datas: ", lista_data)
-print("Produtos:", lista_produtos)
-print("Valores:", lista_valor)
-print("Regiões:", lista_regiao)
-print("Equipes:", lista_equipe)
-print("Clientes:", lista_cliente)
-print("Metódo Pagamento: ", lista_metPagamento)
-print("Desconto: ", lista_desconto)
+df = pd.DataFrame(data = { 
+    'Produto': lista_produtos,
+    'Valor da Venda': lista_valor,
+    'Região': lista_regiao,
+    'Equipe de Venda': lista_equipe,
+    'Cliente': lista_cliente,
+    'Método de Pagamento': lista_metPagamento,
+    'Desconto': lista_desconto
+})
+
+print(df)
