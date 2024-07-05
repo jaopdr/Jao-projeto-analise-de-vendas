@@ -4,9 +4,7 @@ from openpyxl import load_workbook
 import re
 import smtplib
 from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
-import numpy as np
 
 # Carregar o arquivo Excel
 excel = load_workbook('Relacao_Produtos_e_Clientes_2024.xlsx')
@@ -21,7 +19,7 @@ lista_cliente = []
 lista_metPagamento = []
 lista_desconto = []
 
-def enviar_email(attachment_path):
+def enviar_email(attachment_paths):
     # Configurações do servidor SMTP
     smtp_server = 'smtp.gmail.com'
     smtp_port = 587  # Porta para TLS
@@ -35,13 +33,14 @@ def enviar_email(attachment_path):
     msg = MIMEMultipart()
     msg['From'] = remetente
     msg['To'] = destinatario
-    msg['Subject'] = 'Gráfico Anexo'
+    msg['Subject'] = 'Gráficos Anexos'
 
-    # Anexar imagem ao e-mail
-    with open(attachment_path, 'rb') as attachment:
-        image = MIMEImage(attachment.read())
-        image.add_header('Content-Disposition', 'attachment', filename='plot.png')
-        msg.attach(image)
+    # Anexar imagens ao e-mail
+    for path in attachment_paths:
+        with open(path, 'rb') as attachment:
+            image = MIMEImage(attachment.read())
+            image.add_header('Content-Disposition', f'attachment; filename={path}')
+            msg.attach(image)
 
     # Enviar e-mail usando SMTP
     try:
@@ -141,7 +140,50 @@ plt.title('Valor Médio das Vendas por Produto e Região')
 plt.xticks(rotation=30)
 plt.legend(title='Região', bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
-plt.savefig('plot.png')
+plt.savefig('plot1.png')
 
-# Enviar e-mail com o gráfico como anexo
-enviar_email('plot.png')
+# Agrupar por Produto e Equipe de Venda e calcular a média do Valor da Venda
+df_grupo2 = df.groupby(['Produto', 'Equipe de Venda'])['Valor da Venda'].mean().unstack()
+
+# Plotar o gráfico de barras agrupadas por equipe
+df_grupo2.plot(kind='bar', figsize=(12, 6), width=(0.8))
+plt.xlabel('Produto')
+plt.ylabel('Valor da Venda (Média)')
+plt.title('Valor Médio das Vendas por Produto e Equipe')
+plt.xticks(rotation=30)
+plt.legend(title='Equipe', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+plt.savefig('plot2.png')
+
+# Agrupar por Região e Método de Pagamento e calcular a soma do Valor da Venda
+df_metodo_pagamento = df.groupby(['Método de Pagamento', 'Região'])['Valor da Venda'].mean().unstack()
+
+# Plotar o gráfico de barras do valor total de vendas por método de pagamento e região
+df_metodo_pagamento.plot(kind='bar', figsize=(12, 6), width=(0.8))
+plt.xlabel('Método de Pagamento')
+plt.ylabel('Valor Total de Vendas')
+plt.title('Valor Total de Vendas por Região e Método de Pagamento')
+plt.xticks(rotation=45)
+plt.legend(title='Região', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+plt.savefig('plot3.png')
+
+# Agrupar por Equipe de Venda e calcular a média do Desconto
+df_equipe_desconto = df.groupby(['Equipe de Venda'])['Desconto'].mean()
+
+# Definir cores para cada equipe
+colors = ['blue', 'red', 'orange', 'green', 'purple'] * (len(df_equipe_desconto) // 5 + 1)
+colors = colors[:len(df_equipe_desconto)]
+
+# Plotar o gráfico de barras da média de desconto por equipe
+plt.figure(figsize=(12, 6))
+df_equipe_desconto.plot(kind='bar', width=0.8, color=colors)
+plt.xlabel('Equipe de Venda')
+plt.ylabel('Desconto (Média)')
+plt.title('Média de Desconto por Equipe de Venda')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig('plot4.png')
+
+# Enviar e-mail com os gráficos como anexo
+enviar_email(['plot1.png', 'plot2.png', 'plot3.png', 'plot4.png'])
