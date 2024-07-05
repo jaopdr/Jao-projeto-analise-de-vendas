@@ -37,7 +37,7 @@ git clone https://github.com/seu_usuario/nome-do-repositorio.git
 
 ### Como ativar o ambiente virtual 
 ```bash
-cd jao-projeto-analise-vendas
+cd jao-projeto-analise-de-vendas
 python -m venv venv
 ```
 ### No Windows
