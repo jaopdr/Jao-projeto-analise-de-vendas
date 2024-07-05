@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 from openpyxl import load_workbook
 import re
 import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+import numpy as np
 
 # Carregar o arquivo Excel
 excel = load_workbook('Relacao_Produtos_e_Clientes_2024.xlsx')
@@ -16,6 +20,40 @@ lista_equipe = []
 lista_cliente = []
 lista_metPagamento = []
 lista_desconto = []
+
+def enviar_email(attachment_path):
+    # Configurações do servidor SMTP
+    smtp_server = 'smtp.gmail.com'
+    smtp_port = 587  # Porta para TLS
+    
+    # Dados de autenticação
+    remetente = 'jpedro.seze@gmail.com'
+    senha_remetente = 'spavzcyfkwphhrms'
+    destinatario = 'joaosezerino.dev@gmail.com'
+
+    # Construir o e-mail
+    msg = MIMEMultipart()
+    msg['From'] = remetente
+    msg['To'] = destinatario
+    msg['Subject'] = 'Gráfico Anexo'
+
+    # Anexar imagem ao e-mail
+    with open(attachment_path, 'rb') as attachment:
+        image = MIMEImage(attachment.read())
+        image.add_header('Content-Disposition', 'attachment', filename='plot.png')
+        msg.attach(image)
+
+    # Enviar e-mail usando SMTP
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(remetente, senha_remetente)
+        server.sendmail(remetente, destinatario, msg.as_string())
+        print('E-mail enviado com sucesso!')
+    except Exception as e:
+        print(f'Falha ao enviar o e-mail: {e}')
+    finally:
+        server.quit()
 
 # Função para verificar se o valor a partir da segunda letra é numérico
 def verificar_numero(valor):
@@ -103,21 +141,7 @@ plt.title('Valor Médio das Vendas por Produto e Região')
 plt.xticks(rotation=30)
 plt.legend(title='Região', bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
+plt.savefig('plot.png')
 
-# Mostrar o gráfico
-plt.show()
-
-# Agrupar por Produto e Equipe de Venda e calcular a média do Valor da Venda
-df_grupo2 = df.groupby(['Produto', 'Equipe de Venda'])['Valor da Venda'].mean().unstack()
-
-# Plotar o gráfico de barras agrupadas por equipe
-df_grupo2.plot(kind='bar', figsize=(12, 6), width=(0.8))
-plt.xlabel('Produto')
-plt.ylabel('Valor da Venda (Média)')
-plt.title('Valor Médio das Vendas por Produto e Equipe')
-plt.xticks(rotation=30)
-plt.legend(title='Equipe', bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.tight_layout()
-
-# Mostrar o gráfico
-plt.show()
+# Enviar e-mail com o gráfico como anexo
+enviar_email('plot.png')
