@@ -1,14 +1,14 @@
+import pandas as pd
+import matplotlib.pyplot as plt
 from openpyxl import load_workbook
 import re
-from datetime import datetime
-import pandas as pd
+import smtplib
 
 # Carregar o arquivo Excel
 excel = load_workbook('Relacao_Produtos_e_Clientes_2024.xlsx')
 planilha = excel.active
 
 # Listas para armazenar os dados
-lista_data = []
 lista_produtos = []
 lista_valor = []
 lista_regiao = []
@@ -39,25 +39,8 @@ def verificar_pagamento(metPagamento):
             return key
     return metPagamento
 
-# # Função corrigida para verificar a data
-# def verificar_data(data):
-#     if isinstance(data, datetime):
-#         return True
-
-#     formatos = ["%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y", "%m/%d/%Y"]
-
-#     for formato in formatos:
-#         try:
-#             datetime.strptime(data, formato)
-#             return True
-#         except (ValueError, TypeError):
-#             continue
-
-#     return False
-
 # Iterar sobre as linhas da planilha e preencher as listas
 for row in planilha.iter_rows(min_row=2, values_only=True):
-    data = row[0]
     produto = row[1]
     valor = row[2]
     regiao = row[3]
@@ -66,21 +49,17 @@ for row in planilha.iter_rows(min_row=2, values_only=True):
     metPagamento = row[6]
     desconto = row[7]
 
-    # # Verificar e padronizar as datas e adicionar à lista de datas
-    # if verificar_data(data):
-    #     lista_data.append(data)
-
     # Adicionar produto à lista de produtos
     lista_produtos.append(produto)
 
-    # Adicionar valor à lista de valores somente se passar na verificação
+    # Verificar se o valor é numérico e adicionar à lista de valores
     if verificar_numero(valor):
         valor_novo = re.sub(r'[$]', '', valor)  # Remover símbolo $
         lista_valor.append(float(valor_novo))
     else:
-        lista_valor.append(0)
+        lista_valor.append(None)
 
-    # Adicionar regiao à lista de regioes
+    # Adicionar região à lista de regiões
     lista_regiao.append(regiao)
 
     # Adicionar equipe à lista de equipes
@@ -89,17 +68,18 @@ for row in planilha.iter_rows(min_row=2, values_only=True):
     # Adicionar cliente à lista de clientes
     lista_cliente.append(cliente)
 
-    # Substituir o método de pagamento e adicionar à lista metodo pagamento
+    # Substituir o método de pagamento e adicionar à lista método pagamento
     metodo_pagamento_corrigido = verificar_pagamento(metPagamento)
     lista_metPagamento.append(metodo_pagamento_corrigido)
 
-    # Verificar o se o valor do desconto é condizente e adicionar à lista desconto
+    # Verificar se o desconto é positivo e adicionar à lista de descontos
     if desconto >= 0:
         lista_desconto.append(desconto)
     else:
-        lista_desconto.append(0)
+        lista_desconto.append(None)
 
-df = pd.DataFrame(data = { 
+# Criar DataFrame
+df = pd.DataFrame({
     'Produto': lista_produtos,
     'Valor da Venda': lista_valor,
     'Região': lista_regiao,
@@ -109,4 +89,35 @@ df = pd.DataFrame(data = {
     'Desconto': lista_desconto
 })
 
-print(df)
+# Remover linhas onde Valor da Venda ou Desconto é None
+df = df.dropna(subset=['Valor da Venda', 'Desconto'])
+
+# Agrupar por Produto e Região e calcular a média do Valor da Venda
+df_grupo1 = df.groupby(['Produto', 'Região'])['Valor da Venda'].mean().unstack()
+
+# Plotar o gráfico de barras agrupadas por região
+df_grupo1.plot(kind='bar', figsize=(12, 6), width=(0.8))
+plt.xlabel('Produto')
+plt.ylabel('Valor da Venda (Média)')
+plt.title('Valor Médio das Vendas por Produto e Região')
+plt.xticks(rotation=30)
+plt.legend(title='Região', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+
+# Mostrar o gráfico
+plt.show()
+
+# Agrupar por Produto e Equipe de Venda e calcular a média do Valor da Venda
+df_grupo2 = df.groupby(['Produto', 'Equipe de Venda'])['Valor da Venda'].mean().unstack()
+
+# Plotar o gráfico de barras agrupadas por equipe
+df_grupo2.plot(kind='bar', figsize=(12, 6), width=(0.8))
+plt.xlabel('Produto')
+plt.ylabel('Valor da Venda (Média)')
+plt.title('Valor Médio das Vendas por Produto e Equipe')
+plt.xticks(rotation=30)
+plt.legend(title='Equipe', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+
+# Mostrar o gráfico
+plt.show()
