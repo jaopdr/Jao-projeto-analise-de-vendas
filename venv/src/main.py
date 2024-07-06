@@ -7,7 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 
 # Carregar o arquivo Excel
-excel = load_workbook('venv\scr\Relacao_Produtos_e_Clientes_2024.xlsx')
+excel = load_workbook('venv/src/Relacao_Produtos_e_Clientes_2024.xlsx')
 planilha = excel.active
 
 # Listas para armazenar os dados
@@ -76,6 +76,22 @@ def verificar_pagamento(metPagamento):
             return key
     return metPagamento
 
+# Função para gerar gráficos
+def gerar_grafico(df, group_by, value_col, agg_func, kind, title, xlabel, ylabel, filename, legend_title=None, rotation=0):
+    df_grouped = df.groupby(group_by)[value_col].agg(agg_func)
+    if isinstance(df_grouped.index, pd.MultiIndex):
+        df_grouped = df_grouped.unstack()
+    df_grouped.plot(kind=kind, figsize=(12, 6), width=0.8)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.xticks(rotation=rotation)
+    if legend_title:
+        plt.legend(title=legend_title, bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()  # Fechar a figura atual para evitar sobreposição
+
 # Iterar sobre as linhas da planilha e preencher as listas
 for row in planilha.iter_rows(min_row=2, values_only=True):
     produto = row[1]
@@ -126,64 +142,53 @@ df = pd.DataFrame({
     'Desconto': lista_desconto
 })
 
-# Remover linhas onde Valor da Venda ou Desconto é None
-df = df.dropna(subset=['Valor da Venda', 'Desconto'])
+# Gerar gráficos
+gerar_grafico(df, 
+              group_by=['Produto', 'Região'], 
+              value_col='Valor da Venda', 
+              agg_func='mean', 
+              kind='bar', 
+              title='Valor Médio das Vendas por Produto e Região', 
+              xlabel='Produto', 
+              ylabel='Valor da Venda (Média)', 
+              filename='plot1.png', 
+              legend_title='Região', 
+              rotation=30)
 
-# Agrupar por Produto e Região e calcular a média do Valor da Venda
-df_grupo1 = df.groupby(['Produto', 'Região'])['Valor da Venda'].mean().unstack()
+gerar_grafico(df, 
+              group_by=['Produto', 'Equipe de Venda'], 
+              value_col='Valor da Venda', 
+              agg_func='mean', 
+              kind='bar', 
+              title='Valor Médio das Vendas por Produto e Equipe', 
+              xlabel='Produto', 
+              ylabel='Valor da Venda (Média)', 
+              filename='plot2.png', 
+              legend_title='Equipe', 
+              rotation=30)
 
-# Plotar o gráfico de barras agrupadas por região
-df_grupo1.plot(kind='bar', figsize=(12, 6), width=(0.8))
-plt.xlabel('Produto')
-plt.ylabel('Valor da Venda (Média)')
-plt.title('Valor Médio das Vendas por Produto e Região')
-plt.xticks(rotation=30)
-plt.legend(title='Região', bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.tight_layout()
-plt.savefig('plot1.png')
+gerar_grafico(df, 
+              group_by=['Método de Pagamento', 'Região'], 
+              value_col='Valor da Venda', 
+              agg_func='sum', 
+              kind='bar', 
+              title='Valor Total de Vendas por Região e Método de Pagamento', 
+              xlabel='Método de Pagamento', 
+              ylabel='Valor Total de Vendas', 
+              filename='plot3.png', 
+              legend_title='Região', 
+              rotation=45)
 
-# Agrupar por Produto e Equipe de Venda e calcular a média do Valor da Venda
-df_grupo2 = df.groupby(['Produto', 'Equipe de Venda'])['Valor da Venda'].mean().unstack()
+gerar_grafico(df,
+              group_by=['Equipe de Venda'],
+              value_col='Desconto',
+              agg_func='mean',
+              kind='bar',
+              title='Valor Médio dos Descontos Aplicados por Equipe',
+              xlabel='Equipe',
+              ylabel='Desconto Médio',
+              filename='plot4.png',
+              rotation=30)
 
-# Plotar o gráfico de barras agrupadas por equipe
-df_grupo2.plot(kind='bar', figsize=(12, 6), width=(0.8))
-plt.xlabel('Produto')
-plt.ylabel('Valor da Venda (Média)')
-plt.title('Valor Médio das Vendas por Produto e Equipe')
-plt.xticks(rotation=30)
-plt.legend(title='Equipe', bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.tight_layout()
-plt.savefig('plot2.png')
-
-# Agrupar por Região e Método de Pagamento e calcular a soma do Valor da Venda
-df_metodo_pagamento = df.groupby(['Método de Pagamento', 'Região'])['Valor da Venda'].mean().unstack()
-
-# Plotar o gráfico de barras do valor total de vendas por método de pagamento e região
-df_metodo_pagamento.plot(kind='bar', figsize=(12, 6), width=(0.8))
-plt.xlabel('Método de Pagamento')
-plt.ylabel('Valor Total de Vendas')
-plt.title('Valor Total de Vendas por Região e Método de Pagamento')
-plt.xticks(rotation=45)
-plt.legend(title='Região', bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.tight_layout()
-plt.savefig('plot3.png')
-
-# Agrupar por Equipe de Venda e calcular a média do Desconto
-df_equipe_desconto = df.groupby(['Equipe de Venda'])['Desconto'].mean()
-
-# Definir cores para cada equipe
-colors = ['blue', 'red', 'orange', 'green', 'purple'] * (len(df_equipe_desconto) // 5 + 1)
-colors = colors[:len(df_equipe_desconto)]
-
-# Plotar o gráfico de barras da média de desconto por equipe
-plt.figure(figsize=(12, 6))
-df_equipe_desconto.plot(kind='bar', width=0.8, color=colors)
-plt.xlabel('Equipe de Venda')
-plt.ylabel('Desconto (Média)')
-plt.title('Média de Desconto por Equipe de Venda')
-plt.xticks(rotation=45)
-plt.tight_layout()
-plt.savefig('plot4.png')
-
-# Enviar e-mail com os gráficos como anexo
-enviar_email(['plot1.png', 'plot2.png', 'plot3.png', 'plot4.png'])
+# # Enviar e-mail com os gráficos como anexo
+# enviar_email(['plot1.png', 'plot2.png', 'plot3.png', 'plot4.png'])
