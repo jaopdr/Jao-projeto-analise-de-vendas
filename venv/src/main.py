@@ -107,7 +107,9 @@ for row in planilha.iter_rows(min_row=2, values_only=True):
     lista_data.append(data_convertida(data, regex_data))
     lista_produtos.append(produto)
 
+    # Verificar se é uma string
     if isinstance(valor, str) and verificar_numero(valor):
+        # Retirar o $ e trocar por nada, para deixar somente o valor
         valor_novo = re.sub(r'[$]', '', valor)  # Remover símbolo $
         lista_valor.append(float(valor_novo))
     elif isinstance(valor, (int, float)):
@@ -138,6 +140,7 @@ df = pd.DataFrame({
 })
 
 def gerar_grafico(df, group_by, value_col, agg_func, kind, title, xlabel, ylabel, filename, legend_title=None, rotation=0):
+    # Juntar as dataframes necessárias para 
     df_grouped = df.groupby(group_by)[value_col].agg(agg_func)
     
     if kind == 'line':
